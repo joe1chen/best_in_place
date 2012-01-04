@@ -21,6 +21,7 @@ The editor works by PUTting the updated value to the server and GETting the upda
 - Compatible with **textarea**
 - Compatible with **select** dropdown with custom collections
 - Compatible with custom boolean values (same usage of **checkboxes**)
+- Compatible with **jQuery UI Datepickers**
 - Sanitize HTML and trim spaces of user's input on user's choice
 - Displays server-side **validation** errors
 - Allows external activator
@@ -28,7 +29,8 @@ The editor works by PUTting the updated value to the server and GETting the upda
 - Autogrowing textarea
 - Helper for generating the best_in_place field only if a condition is satisfied
 - Provided test helpers to be used in your integration specs
-- Custom display methods
+- Custom display methods using a method from your model or an existing rails
+  view helper
 
 ##Usage of Rails 3 Gem
 
@@ -42,7 +44,7 @@ Params:
 
 Options:
 
-- **:type** It can be only [:input, :textarea, :select, :checkbox] or if undefined it defaults to :input.
+- **:type** It can be only [:input, :textarea, :select, :checkbox, :date] or if undefined it defaults to :input.
 - **:collection**: In case you are using the :select type then you must specify the collection of values it takes. In case you are
   using the :checkbox type you can specify the two values it can take, or otherwise they will default to Yes and No.
 - **:path**: URL to which the updating action will be sent. If not defined it defaults to the :object path.
@@ -109,48 +111,41 @@ The key can be a string or an integer.
 The first value is always the negative boolean value and the second the positive. Structure: `["false value", "true value"]`.
 If not defined, it will default to *Yes* and *No* options.
 
-## Controller response and respond_with_bip
+### Date
 
-Your controller should respond to json as it's the format used by best in
-place javascript. A simple example would be:
+    <%= best_in_place @user, :birth_date, :type => :date %>
 
-    class UserController < ApplicationController
-      def update
-        @user = User.find(params[:id])
+With the :date type the input field will be initialized as a datepicker input.
+In order to provide custom options to the datepicker initialization you must
+prepare a `$.datepicker.setDefaults` call with the preferences of your choice.
 
-        respond_to do |format|
-          if @user.update_attributes(params[:user])
-            format.html { redirect_to(@user, :notice => 'User was successfully updated.') }
-            format.json { head :ok }
-          else
-            format.html { render :action => "edit" }
-            format.json { render :json => @user.errors.full_messages, :status => :unprocessable_entity }
-          end
+More information about datepicker and setting defaults can be found
+[here](http://docs.jquery.com/UI/Datepicker/$.datepicker.setDefaults)
+
+## Controller response with respond_with_bip
+
+Best in place provides a utility method you should use in your controller in
+order to provide the response that is expected by the javascript side, using
+the :json format. This is a simple example showing an update action using it:
+
+    def update
+      @user = User.find params[:id]
+
+      respond_to do |format|
+        if @user.update_attributes(params[:user])
+          format.html { redirect_to(@user, :notice => 'User was successfully updated.') }
+          format.json { respond_with_bip(@user) }
+        else
+          format.html { render :action => "edit" }
+          format.json { respond_with_bip(@user) }
         end
       end
     end
 
-If you respond with a json like `{:display_as => "New value to show"}` with
-status 200 (ok), then the updated field will show *New value to show* after
-being updated. This is needed in order to support the custom display methods,
-and it's automatically handled if you use the new method to encapsulate
-the responses:
 
+## Custom display methods
 
-        respond_to do |format|
-          if @user.update_attributes(params[:user])
-            format.html { redirect_to(@user, :notice => 'User was successfully updated.') }
-            format.json { respond_with_bip(@user) }
-          else
-            format.html { render :action => "edit" }
-            format.json { respond_with_bip(@user) }
-          end
-        end
-
-This will be exactly the same as the previous example, but with support to
-handle custom display methods.
-
-##Using custom display methods
+### Using `display_as`
 
 As of best in place 1.0.3 you can use custom methods in your model in order to
 decide how a certain field has to be displayed. You can write something like:
@@ -159,17 +154,21 @@ decide how a certain field has to be displayed. You can write something like:
 
 Then instead of using `@user.description` to show the actual value, best in
 place will call `@user.mk_description`. This can be used for any kind of
-custom formatting, text with markdown, currency values, etc...
+custom formatting, text with markdown, etc...
 
-Because best in place has no way to call that method in your model from
-javascript after a successful update, the only way to display the new correct
-value after an edition is to use the provided methods to respond in your
-controllers, or implement the same in your own way.
+### Using `display_with`
 
-If you respond a successful update with a json having a `display_as` key, that
-value will be used to update the value in the view. The provided
-`respond_with_bip` handles this for you, but if you want you can always
-customize this behaviour.
+In practice the most common situation is when you want to use an existing
+helper to render the attribute, like `number_to_currency` or `simple_format`.
+As of version 1.0.4 best in place provides this feature using the
+`display_with` option. You can use it like this:
+
+    = best_in_place @user, :money, :display_with => :number_to_currency
+
+If you want to pass further arguments to the helper you can do it providing an
+additional `helper_options` hash:
+
+    = best_in_place @user, :money, :display_with => :number_to_currency, :helper_options => {:unit => "€"}
 
 
 ##Non Active Record environments
@@ -277,11 +276,16 @@ thanks to Rails 3.1. Just begin including the gem in your Gemfile:
     gem "best_in_place"
 
 After that, specify the use of the jquery, jquery.purr and best in place
-javascripts in your application.js:
+javascripts in your application.js, and optionally specify jquery-ui if
+you want to use jQuery UI datepickers:
 
     //= require jquery
+    //= require jquery-ui
     //= require jquery.purr
     //= require best_in_place
+
+If you want to use jQuery UI datepickers, you should also install and
+load your preferred jquery-ui CSS file and associated assets.
 
 Then, just add a binding to prepare all best in place fields when the document is ready:
 
@@ -314,6 +318,10 @@ After that, install and load all the javascripts from the folder
 You can automatize this installation by doing
 
     rails g best_in_place:setup
+
+If you want to use jQuery UI datepickers, you should also install and
+load jquery-ui.js as well as your preferred jquery-ui CSS file and
+associated assets.
 
 Finally, as for Rails 3.1, just add a binding to prepare all best in place fields when the document is ready:
 
