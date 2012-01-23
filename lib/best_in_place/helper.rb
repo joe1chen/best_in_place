@@ -44,7 +44,11 @@ module BestInPlace
       out << " data-original-content='#{object.send(field)}'" if opts[:display_as] || opts[:display_with]
       if !opts[:sanitize].nil? && !opts[:sanitize]
         out << " data-sanitize='false'>"
-        out << sanitize(value, :tags => %w(b i u s a strong em p h1 h2 h3 h4 h5 ul li ol hr pre span img br), :attributes => %w(id class href))
+        if opts[:type] == :cleditor
+          out << value
+        else
+          out << sanitize(value, :tags => %w(b i u s a strong em p h1 h2 h3 h4 h5 ul li ol hr pre span img br), :attributes => %w(id class href))
+        end
       else
         out << ">#{sanitize(value, :tags => nil, :attributes => nil)}"
       end
@@ -60,7 +64,7 @@ module BestInPlace
       end
     end
 
-  private
+    private
     def build_value_for(object, field, opts)
       if opts[:display_as]
         BestInPlace::DisplayMethods.add_model_method(object.class.to_s, field, opts[:display_as])
