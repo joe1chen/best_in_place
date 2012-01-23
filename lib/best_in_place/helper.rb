@@ -43,6 +43,9 @@ module BestInPlace
       out << " data-html-attrs='#{opts[:html_attrs].to_json}'" unless opts[:html_attrs].blank?
       out << " data-original-content='#{object.send(field)}'" if opts[:display_as] || opts[:display_with]
       if opts[:type] == :cleditor
+        out << " data-cleditor-doctype='#{opts[:cleditor_doctype]}'" unless opts[:cleditor_doctype].blank?
+        out << " data-cleditor-doccssfile='#{opts[:cleditor_doccssfile]}'" unless opts[:cleditor_doccssfile].blank?
+        out << " data-cleditor-bodystyle='#{opts[:cleditor_bodystyle].gsub(/'/, "&#39;")}'" unless opts[:cleditor_bodystyle].blank?
         out << " style='display:block'"
       end
       if !opts[:sanitize].nil? && !opts[:sanitize]
