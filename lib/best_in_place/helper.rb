@@ -42,6 +42,9 @@ module BestInPlace
       out << " data-inner-class='#{opts[:inner_class]}'" if opts[:inner_class]
       out << " data-html-attrs='#{opts[:html_attrs].to_json}'" unless opts[:html_attrs].blank?
       out << " data-original-content='#{object.send(field)}'" if opts[:display_as] || opts[:display_with]
+      if opts[:type] == :cleditor
+        out << " style='display:block'"
+      end
       if !opts[:sanitize].nil? && !opts[:sanitize]
         out << " data-sanitize='false'>"
         if opts[:type] == :cleditor
