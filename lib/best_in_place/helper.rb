@@ -48,6 +48,7 @@ module BestInPlace
         out << " data-cleditor-doctype='#{opts[:cleditor_doctype]}'" unless opts[:cleditor_doctype].blank?
         out << " data-cleditor-doccssfile='#{opts[:cleditor_doccssfile]}'" unless opts[:cleditor_doccssfile].blank?
         out << " data-cleditor-bodystyle='#{opts[:cleditor_bodystyle].gsub(/'/, "&#39;")}'" unless opts[:cleditor_bodystyle].blank?
+        out << " data-cleditor-imagespath='#{opts[:cleditor_imagespath].gsub(/'/, "&#39;")}'" unless opts[:cleditor_imagespath].blank?
         out << " style='display:block'"
       end
       if !opts[:sanitize].nil? && !opts[:sanitize]
