@@ -1,3 +1,3 @@
 module BestInPlace
-  VERSION = "1.0.5.3"
+  VERSION = "1.0.5.4"
 end
