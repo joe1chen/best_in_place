@@ -1,6 +1,4 @@
 class UsersController < ApplicationController
-  respond_to :html, :json
-
   # GET /users
   # GET /users.xml
   def index
@@ -22,6 +20,16 @@ class UsersController < ApplicationController
       format.html # show.html.erb
       format.xml  { render :xml => @user }
     end
+  end
+
+  def email_field
+    @user = User.find(params[:id])
+    render :action => :email_field, :layout => false
+  end
+
+  def show_ajax
+    @user = User.find(params[:id])
+    @countries = COUNTRIES.to_a
   end
 
   def double_init
@@ -87,12 +95,5 @@ class UsersController < ApplicationController
       format.html { redirect_to(users_url) }
       format.xml  { head :ok }
     end
-  end
-
-  def test_respond_with
-    @user = User.find(params[:id])
-
-    @user.update_attributes(params[:user])
-    respond_with(@user)
   end
 end

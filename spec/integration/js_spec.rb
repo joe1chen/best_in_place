@@ -13,9 +13,22 @@ describe "JS behaviour", :js => true do
       :birth_date => Time.now.utc,
       :description => "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus a lectus et lacus ultrices auctor. Morbi aliquet convallis tincidunt. Praesent enim libero, iaculis at commodo nec, fermentum a dolor. Quisque eget eros id felis lacinia faucibus feugiat et ante. Aenean justo nisi, aliquam vel egestas vel, porta in ligula. Etiam molestie, lacus eget tincidunt accumsan, elit justo rhoncus urna, nec pretium neque mi et lorem. Aliquam posuere, dolor quis pulvinar luctus, felis dolor tincidunt leo, eget pretium orci purus ac nibh. Ut enim sem, suscipit ac elementum vitae, sodales vel sem.",
       :money => 100,
+      :money_proc => 100,
       :favorite_color => 'Red',
       :favorite_books => "The City of Gold and Lead",
       :description => "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus a lectus et lacus ultrices auctor. Morbi aliquet convallis tincidunt. Praesent enim libero, iaculis at commodo nec, fermentum a dolor. Quisque eget eros id felis lacinia faucibus feugiat et ante. Aenean justo nisi, aliquam vel egestas vel, porta in ligula. Etiam molestie, lacus eget tincidunt accumsan, elit justo rhoncus urna, nec pretium neque mi et lorem. Aliquam posuere, dolor quis pulvinar luctus, felis dolor tincidunt leo, eget pretium orci purus ac nibh. Ut enim sem, suscipit ac elementum vitae, sodales vel sem."
+  end
+
+  describe "namespaced controllers" do
+    it "should be able to use array-notation to describe both object and path" do
+      @user.save!
+      visit admin_user_path(@user)
+
+      within("#last_name") { page.should have_content("Napoli") }
+      bip_text @user, :last_name, "Other thing"
+
+      within("#last_name") { page.should have_content("Other thing") }
+    end
   end
 
   describe "nil option" do
@@ -25,6 +38,18 @@ describe "JS behaviour", :js => true do
       visit user_path(@user)
 
       within("#name") do
+        page.should have_content("-")
+      end
+    end
+
+    it "should render the default '-' string when there is an error and if the intial string is '-'" do
+      @user.money = nil
+      @user.save!
+      visit user_path(@user)
+
+      bip_text @user, :money, "abcd"
+
+      within("#money") do
         page.should have_content("-")
       end
     end
@@ -368,36 +393,6 @@ describe "JS behaviour", :js => true do
     end
   end
 
-  it "should show validation errors using respond_with in the controller" do
-    @user.save!
-    visit user_path(@user)
-
-    bip_text @user, :last_name, "a"
-    page.should have_content("last_name has invalid length")
-  end
-
-  it "should be able to update a field after an error using respond_with in the controller" do
-    @user.save!
-    visit user_path(@user)
-
-    bip_text @user, :last_name, "a"
-
-    within("#last_name") do
-      page.should have_content("Napoli")
-    end
-
-    bip_text @user, :last_name, "Another"
-
-    within("#last_name") do
-      page.should have_content("Another")
-    end
-
-    visit user_path(@user)
-    within("#last_name") do
-      page.should have_content("Another")
-    end
-  end
-
   it "should fire off a callback when updating a field" do
     @user.save!
     visit user_path(@user)
@@ -466,18 +461,44 @@ describe "JS behaviour", :js => true do
 
         bip_text @user, :address, "New address"
 
+        sleep 1
+
         id = BestInPlace::Utils.build_best_in_place_id @user, :address
         page.execute_script <<-JS
           $("##{id}").click();
         JS
 
+        sleep 1
+
         text = page.find("##{id} input").value
         text.should == "New address"
+      end
+    end
+
+    it "should quote properly the data-original-content attribute" do
+      @user.address = "A's & B's"
+      @user.save!
+      retry_on_timeout do
+        visit user_path(@user)
+
+        id = BestInPlace::Utils.build_best_in_place_id @user, :address
+
+        text = page.find("##{id}")["data-original-content"]
+        text.should == "A's & B's"
       end
     end
   end
 
   describe "display_with" do
+    it "should show nil text when original value is nil" do
+      @user.description = ""
+      @user.save!
+
+      visit user_path(@user)
+
+      within("#dw_description") { page.should have_content("-") }
+    end
+
     it "should render the money using number_to_currency" do
       @user.save!
       visit user_path(@user)
@@ -486,6 +507,8 @@ describe "JS behaviour", :js => true do
         page.should have_content("$100.00")
       end
     end
+    
+    
 
     it "should still show the custom format after an error" do
       @user.save!
@@ -534,10 +557,14 @@ describe "JS behaviour", :js => true do
 
         bip_text @user, :money, "40"
 
+        sleep 1
+
         id = BestInPlace::Utils.build_best_in_place_id @user, :money
         page.execute_script <<-JS
           $("##{id}").click();
         JS
+
+        sleep 1
 
         text = page.find("##{id} input").value
         text.should == "40"
@@ -554,7 +581,71 @@ describe "JS behaviour", :js => true do
 
       within("#alt_money") { page.should have_content("€58.00") }
     end
+    
+    describe "display_with using a lambda" do
+  
 
+      it "should render the money" do
+        @user.save!
+        visit user_path(@user)
+
+        within("#money_proc") do
+          page.should have_content("$100.00")
+        end
+      end
+
+      
+
+      it "should show the new value using the helper after a successful update" do
+        @user.save!
+        visit user_path(@user)
+
+        bip_text @user, :money_proc, "240"
+
+        within("#money_proc") do
+          page.should have_content("$240.00")
+        end
+      end
+
+      it "should display the original content when editing the form" do
+        @user.save!
+        retry_on_timeout do
+          visit user_path(@user)
+
+          id = BestInPlace::Utils.build_best_in_place_id @user, :money_proc
+          page.execute_script <<-JS
+            $("##{id}").click();
+          JS
+
+          text = page.find("##{id} input").value
+          text.should == "100.0"
+        end
+      end
+
+      it "should display the updated content after editing the field two consecutive times" do
+        @user.save!
+
+        retry_on_timeout do
+          visit user_path(@user)
+
+          bip_text @user, :money_proc, "40"
+
+          sleep 1
+
+          id = BestInPlace::Utils.build_best_in_place_id @user, :money_proc
+          page.execute_script <<-JS
+            $("##{id}").click();
+          JS
+
+          sleep 1
+
+          text = page.find("##{id} input").value
+          text.should == "40"
+        end
+      end
+      
+    end
+    
   end
 
   it "should display strings with quotes correctly in fields" do
@@ -571,6 +662,19 @@ describe "JS behaviour", :js => true do
 
       text = page.find("##{id} input").value
       text.should == "A last name \"with double quotes\""
+    end
+  end
+
+  it "should allow me to set texts with quotes with sanitize => false" do
+    @user.save!
+
+    retry_on_timeout do
+      visit double_init_user_path(@user)
+
+      bip_area @user, :description, "A <a href=\"http://google.es\">link in this text</a> not sanitized."
+      visit double_init_user_path(@user)
+
+      page.should have_link("link in this text", :href => "http://google.es")
     end
   end
 end
